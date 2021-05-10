@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2568,14 +2569,14 @@ static int _dsi_ctrl_setup_isr(struct dsi_ctrl *dsi_ctrl)
 
 	irq_num = platform_get_irq(dsi_ctrl->pdev, 0);
 	if (irq_num < 0) {
-		pr_err("[DSI_%d] Failed to get IRQ number, %d\n",
+		printk_deferred(KERN_INFO"[DSI_%d] Failed to get IRQ number, %d\n",
 				dsi_ctrl->cell_index, irq_num);
 		rc = irq_num;
 	} else {
 		rc = devm_request_threaded_irq(&dsi_ctrl->pdev->dev, irq_num,
 				dsi_ctrl_isr, NULL, 0, "dsi_ctrl", dsi_ctrl);
 		if (rc) {
-			pr_err("[DSI_%d] Failed to request IRQ, %d\n",
+			printk_deferred(KERN_INFO"[DSI_%d] Failed to request IRQ, %d\n",
 					dsi_ctrl->cell_index, rc);
 		} else {
 			dsi_ctrl->irq_info.irq_num = irq_num;
