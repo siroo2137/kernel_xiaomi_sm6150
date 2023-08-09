@@ -70,7 +70,7 @@ KRNL_REL_TAG="$KERNEL_VERSION"
 
 DEFCONFIG="sweet_defconfig"
 
-AnyKernel="https://gitlab.com/itsshashanksp/AnyKernel3.git"
+AnyKernel="https://github.com/itsshashanksp/AnyKernel3"
 AnyKernelbranch="master"
 
 HOSST="sleeping-bag"
