@@ -282,7 +282,7 @@ config SCHEDUTIL_DOWN_RATE_LIMIT_PERF
 
 config SCHEDUTIL_DEFAULT_HIGHSPEED_FREQ_LP
 	int "Default highspeed frequency for the lp cluster"
-	default 1804800
+	default 0
 	help
 	  This sets schedutil's default efficient frequency for the lp
 	  cluster. This frequency needs to be set according to the available
@@ -290,7 +290,7 @@ config SCHEDUTIL_DEFAULT_HIGHSPEED_FREQ_LP
 
 config SCHEDUTIL_DEFAULT_HIGHSPEED_FREQ_PERF
 	int "Default highspeed frequency for the perf cluster"
-	default 2304000
+	default 0
 	help
 	  This sets schedutil's default efficient frequency for the perf
 	  cluster. This frequency needs to be set according to the available
