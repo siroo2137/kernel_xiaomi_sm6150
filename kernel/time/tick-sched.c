@@ -1419,10 +1419,13 @@ void tick_cancel_sched_timer(int cpu)
 	if (ts->sched_timer.base)
 		hrtimer_cancel(&ts->sched_timer);
 # endif
-
-	memset(ts, 0, sizeof(*ts));
+	idle_sleeptime = ts->idle_sleeptime;
+	iowait_sleeptime = ts->iowait_sleeptime;
 	idle_calls = ts->idle_calls;
 	idle_sleeps = ts->idle_sleeps;
+	memset(ts, 0, sizeof(*ts));
+	ts->idle_sleeptime = idle_sleeptime;
+	ts->iowait_sleeptime = iowait_sleeptime;
 	ts->idle_calls = idle_calls;
 	ts->idle_sleeps = idle_sleeps;
 }
