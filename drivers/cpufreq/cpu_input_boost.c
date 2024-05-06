@@ -159,6 +159,9 @@ bool cpu_input_boost_within_input(unsigned long timeout_ms)
 
 static void __cpu_input_boost_kick(struct boost_drv *b)
 {
+
+        unsigned int period = 1;
+
 	if (test_bit(SCREEN_OFF, &b->state))
 		return;
 
@@ -167,7 +170,7 @@ static void __cpu_input_boost_kick(struct boost_drv *b)
 
 	set_bit(INPUT_BOOST, &b->state);
 	if (!mod_delayed_work(system_unbound_wq, &b->input_unboost,
-			      msecs_to_jiffies(input_boost_duration)))
+			      msecs_to_jiffies(input_boost_duration * period)))
 		wake_up(&b->boost_waitq);
 }
 
