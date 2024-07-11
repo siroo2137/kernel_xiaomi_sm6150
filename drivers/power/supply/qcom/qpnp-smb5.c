@@ -944,6 +944,8 @@ static int smb5_parse_dt(struct smb5 *chip)
 		}
 	}
 
+	chg->reverse_boost_wa = of_property_read_bool(node, "mi,reverse_boost-wa");
+
 	chg->uart_en_gpio = of_get_named_gpio(node, "uart-en-gpio", 0);
 	if (!gpio_is_valid(chg->uart_en_gpio))
 		pr_err("failed to get uart_en_gpio\n");
