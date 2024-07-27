@@ -356,6 +356,24 @@ static int usbpd_set_new_fcc_voter(struct usbpd_pm *pdpm)
 }
 */
 
+static bool is_bq25970_available(struct usbpd_pm *pdpm)
+{
+	if (!pdpm->cp_psy) {
+            if (pm_config.cp_sec_enable)
+                pdpm->cp_psy = power_supply_get_by_name("bq2597x-master");
+                else
+		pdpm->cp_psy = power_supply_get_by_name("bq2597x-standalone");
+	}
+
+	if (!pdpm->cp_psy)
+		pdpm->cp_psy = power_supply_get_by_name("ln8000");
+
+	if (!pdpm->cp_psy)
+		return false;
+
+	return true;
+}
+
 static void usbpd_check_cp_psy(struct usbpd_pm *pdpm)
 {
 	if (!pdpm->cp_psy) {
@@ -935,8 +953,6 @@ static void usbpd_update_pps_status(struct usbpd_pm *pdpm)
 	}
 }
 
-#define TAPER_TIMEOUT	(25000 / PM_WORK_RUN_NORMAL_INTERVAL)
-#define IBUS_CHANGE_TIMEOUT  (2500 / PM_WORK_RUN_NORMAL_INTERVAL)
 static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 {
 	int ret = 0;
@@ -951,7 +967,17 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	int effective_fcc_val = 0;
 	int effective_fcc_taper = 0;
 	int thermal_level = 0;
+	int taper_timeout;
+        int ibus_change_timeout;
 	static int curr_fcc_limit, curr_ibus_limit, ibus_limit;
+
+	if (is_bq25970_available(pdpm)) {
+		taper_timeout = 25000 / PM_WORK_RUN_NORMAL_INTERVAL;
+		ibus_change_timeout = 2500 / PM_WORK_RUN_NORMAL_INTERVAL;
+	} else {
+		taper_timeout = 5000 / PM_WORK_RUN_CRITICAL_INTERVAL;
+		ibus_change_timeout = 500 / PM_WORK_RUN_CRITICAL_INTERVAL;
+	}
 
 	//usbpd_set_new_fcc_voter(pdpm);
 
@@ -975,7 +1001,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 
 	/* reduce bus current in cv loop */
 	if (pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - BQ_TAPER_HYS_MV) {
-		if (ibus_lmt_change_timer++ > IBUS_CHANGE_TIMEOUT && !pdpm->disable_taper_fcc) {
+		if (ibus_lmt_change_timer++ > ibus_change_timeout && !pdpm->disable_taper_fcc) {
 			ibus_lmt_change_timer = 0;
 			ibus_limit = curr_ibus_limit - 100;
 			effective_fcc_taper = usbpd_get_effective_fcc_val(pdpm);
@@ -1084,7 +1110,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	/*check overcharge when it is cool*/
 	if (pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt
 			&& is_cool_charge(pdpm)) {
-		if (cool_overcharge_timer++ > TAPER_TIMEOUT) {
+		if (cool_overcharge_timer++ > taper_timeout) {
 			pr_info("cool overcharge\n");
 			cool_overcharge_timer = 0;
 			return PM_ALGO_RET_TAPER_DONE;
@@ -1095,7 +1121,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	/* charge pump taper charge */
 	if (pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - TAPER_VOL_HYS
 			&& pdpm->cp.ibat_curr < pm_config.fc2_taper_current) {
-		if (fc2_taper_timer++ > TAPER_TIMEOUT) {
+		if (fc2_taper_timer++ > taper_timeout) {
 			pr_info("charge pump taper charging done\n");
 			fc2_taper_timer = 0;
 			return PM_ALGO_RET_TAPER_DONE;
@@ -1454,10 +1480,13 @@ static void usbpd_pm_workfunc(struct work_struct *work)
 			__func__, pm_config.bat_volt_lp_lmt, pdpm->cp.vbat_volt);
 
 	if (!usbpd_pm_sm(pdpm) && pdpm->pd_active) {
-		if (pdpm->state == PD_PM_STATE_FC2_ENTRY_2)
+		if (pdpm->state == PD_PM_STATE_FC2_ENTRY_2 && is_bq25970_available(pdpm)) {
 			internal = PM_WORK_RUN_QUICK_INTERVAL;
-		else
+		} else if (is_bq25970_available(pdpm)) {
 			internal = PM_WORK_RUN_NORMAL_INTERVAL;
+		} else {
+                        internal = PM_WORK_RUN_CRITICAL_INTERVAL;
+		}
 
 		schedule_delayed_work(&pdpm->pm_work,
 				msecs_to_jiffies(internal));
@@ -1713,6 +1742,7 @@ static int usbpd_pm_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pdpm->psy_change_lock);
 
+        is_bq25970_available(pdpm);
 	usbpd_check_cp_psy(pdpm);
 	usbpd_check_cp_sec_psy(pdpm);
 	usbpd_check_usb_psy(pdpm);
